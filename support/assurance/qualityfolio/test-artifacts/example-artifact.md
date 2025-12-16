@@ -745,7 +745,7 @@ status: open
 ```yaml
 owner: james@example.in
 test_type: Automated
-priority: High
+priority: Low
 tags:
   - Opsfolio
   - Authentication
@@ -764,7 +764,7 @@ Automates verification of Opsfolio login flow using browser automation for CI/CD
 
 **Scope**
 
-- Playwright-based test automation.
+- Playwright-based test automation
 - Authentication workflow validation in QA and Staging(UI + API).
 - Supports regression testing before releases.
 - Captures execution logs, evidence, and trace files for audit and compliance.
@@ -923,7 +923,7 @@ doc-classify:
 cycle: 1.1
 severity: high
 assignee: Sandy Jose
-status: passed
+status: failed
 ```
 
 - [Results JSON](./evidence/TC-LOGIN-0103/1.1/result.auto.json)
