@@ -1,0 +1,52 @@
+{
+  "test_case_fii": "TC-GLUE-001",
+  "title": "Verify successful login using registered email and correct password",
+  "status": "passed",
+  "start_time": "2025-10-30T08:45:10.120Z",
+  "end_time": "2025-10-30T08:45:26.740Z",
+  "total_duration": "16.62 seconds",
+  "steps": [
+    {
+      "step": 1,
+      "stepname": "Navigate to https://owasp.glueup.com/.",
+      "status": "passed",
+      "start_time": "2025-10-30T08:45:10.135Z",
+      "end_time": "2025-10-30T08:45:15.225Z"
+    },
+    {
+      "step": 2,
+      "stepname": "Click on the 'Login' option.",
+      "status": "passed",
+      "start_time": "2025-10-30T08:45:15.226Z",
+      "end_time": "2025-10-30T08:45:16.042Z"
+    },
+    {
+      "step": 3,
+      "stepname": "Enter a valid registered email address.",
+      "status": "passed",
+      "start_time": "2025-10-30T08:45:16.043Z",
+      "end_time": "2025-10-30T08:45:17.215Z"
+    },
+    {
+      "step": 4,
+      "stepname": "Enter the correct password.",
+      "status": "passed",
+      "start_time": "2025-10-30T08:45:17.216Z",
+      "end_time": "2025-10-30T08:45:18.445Z"
+    },
+    {
+      "step": 5,
+      "stepname": "Click on the 'Login' or 'Sign In' button.",
+      "status": "passed",
+      "start_time": "2025-10-30T08:45:18.446Z",
+      "end_time": "2025-10-30T08:45:20.028Z"
+    },
+    {
+      "step": 6,
+      "stepname": "Close the browser.",
+      "status": "passed",
+      "start_time": "2025-10-30T08:45:25.960Z",
+      "end_time": "2025-10-30T08:45:26.739Z"
+    }
+  ]
+}

@@ -365,25 +365,26 @@ doc-classify:
 
 ```
 ASSURANCE-PRIME/
-└── support/
-    └── assurance/
-        └── qualityfolio/
-            ├── evidence/
-            │   ├── TC-LOGIN-0001/
-            │   │   └── 1.1/
-            │   │       ├── result.auto.json
-            │   │       └── run.auto.md
-            │   └── TC-LOGIN-0101/
-            ├── sqlpage/
-            │   └── sqlpage.json
-            ├── test-artifacts/
-            │   ├── example-artifact.md
-            │   ├── qf-complex.md
-            │   ├── qf-large.md
-            │   ├── qf-medium.md
-            │   └── qf-small.md
-            ├── qualityfolio-json-etl.sql   # SQL ETL script for Qualityfolio data
-            └── qualityfolio.md             # SQLPage Markdown page (DB config + queries)
+├── support/
+│   └── assurance/
+│       └── qualityfolio/
+│           ├── evidence/
+│           │   ├── TC-GLUE-001/
+│           │   │   └── 1.1/
+│           │   │       ├── result.auto.json
+│           │   │       └── run.auto.md
+│           │   └── TC-GLUE-002/
+│           │       └── 1.1/
+│           │           ├── loginButtonClick.png
+│           │           ├── result.auto.json
+│           │           └── run.auto.md
+│           ├── sqlpage/
+│           │   └── sqlpage.json                  # runtime configuration file for SQLPage
+│           ├── test-artifacts/
+│           │   └── example-artifact.md
+│           ├── qualityfolio-json-etl.sql         # SQL ETL script for Qualityfolio data
+│           ├── qualityfolio.md                   # SQLPage Markdown page (DB config + queries)
+│           └── resource-surveillance.sqlite.db   # Database generated
 
 ```
 
@@ -391,7 +392,7 @@ ASSURANCE-PRIME/
 
 ## Example files
 
-Example test artifacts in all the 4 models - small, medium, large, and complex - are available [here](https://github.com/programmablemd/assurance-prime/tree/main/support/assurance/qualityfolio/test-artifacts)
+Example test artifact is available [here](https://github.com/programmablemd/assurance-prime/tree/main/support/assurance/qualityfolio/test-artifacts)
 
 ## Checklist for authors
 
