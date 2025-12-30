@@ -171,7 +171,7 @@ FROM v_section_hierarchy_summary;
 
 -- Second Card V2: Total Passed
 SELECT
-    '## Total Passed Cases:'  AS description_md,
+    '## Total Passed Cases'  AS description_md,
     '# ' || COALESCE(COUNT(test_case_id), 0) AS description_md,
     'green-lt' AS background_color,
     'check' AS icon,
@@ -181,7 +181,7 @@ WHERE test_case_status IN ('passed','pending');
 
 -- Second Card: Total Defects
 SELECT
-    '## Total Defects:'  AS description_md,
+    '## Total Defects'  AS description_md,
     '# ' || COALESCE(COUNT(test_case_id), 0) AS description_md,
     'red-lt' AS background_color,
     'bug' AS icon,
@@ -191,7 +191,7 @@ WHERE test_case_status IN ('reopen', 'failed');
 
 -- Closed Defects
 SELECT
-    '## Closed Defects:'  AS description_md,
+    '## Closed Defects'  AS description_md,
     '# ' || COALESCE(COUNT(test_case_id), 0) AS description_md,
     'blue-lt' AS background_color,
     'x' AS icon,
@@ -201,7 +201,7 @@ WHERE test_case_status IN ('closed');
 
 
 SELECT
-    '## Reopened Defects:'  AS description_md,
+    '## Reopened Defects'  AS description_md,
     '# ' || COALESCE(COUNT(test_case_id), 0) AS description_md,
     'yellow-lt' AS background_color,
     'alert-circle' AS icon,
@@ -218,7 +218,7 @@ WITH counts AS (
     ) AS total_defects
 )
 SELECT
-  '## Failed Percentage:' AS description_md,
+  '## Failed Percentage' AS description_md,
   '# ' ||
   CASE
     WHEN total_tests = 0 THEN '0%'
@@ -237,7 +237,7 @@ WITH counts AS (
     ) AS total_defects
 )
 SELECT
-  '## Success Percentage:' AS description_md,
+  '## Success Percentage' AS description_md,
   '# ' ||
   CASE
     WHEN total_tests = 0 THEN '0%'
