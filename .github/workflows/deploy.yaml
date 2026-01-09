@@ -21,7 +21,7 @@ jobs:
         env:
           DATABASE_URL: "sqlite://resource-surveillance.sqlite.db?mode=rwc"
           WEB_ROOT: "./dev-src.auto"
-          ALLOW_EXEC: true
+          ALLOW_EXEC: "true"
           PORT: 9227
         run: |
           bash -x support/generate-qualityfolio-db.sh
