@@ -479,15 +479,15 @@ GROUP BY
 
   project_name;
 -- ASSIGNEE MASTER
-  DROP VIEW IF EXISTS qf_assignee_master;
-CREATE VIEW qf_assignee_master as
-select
-  'ALL' as assignee
-union all
-select
-  distinct latest_assignee as assignee
-from
-  qf_case_status;
+-- DROP VIEW IF EXISTS qf_assignee_master;
+-- CREATE VIEW qf_assignee_master as
+-- select
+--   'ALL' as assignee
+-- union all
+-- select
+--   distinct latest_assignee as assignee
+-- from
+--   qf_case_status;
 -- 7. OPEN ISSUES AGE TRACKING
   ------------------------------------------------------------------------------
   DROP TABLE IF EXISTS qf_issue;
@@ -2030,3 +2030,454 @@ from
   on prj.uniform_resource_id=tbl.uniform_resource_id
 where
   tbl.role_name = 'suite'  and prj.depth=1 and tbl.depth=3;
+
+DROP VIEW IF EXISTS qf_role_with_plan;
+CREATE VIEW qf_role_with_plan AS
+select
+  tbl.rownum,
+  tbl.extracted_id as planid,
+  tbl.depth,
+  tbl.file_basename,
+  tbl.uniform_resource_id,
+  tbl.role_name,
+  trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'requirementID:') + 15,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'requirementID:') + 15,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'requirementID:') + 15,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as requirementID ,
+   trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'Priority:') + 10,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'Priority:') + 10,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'Priority:') + 10,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as priority ,
+    trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'Scenario Type:') + 15,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'Scenario Type:') + 15,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'Scenario Type:') + 15,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as scenario_type ,
+  prj.title as project_name,
+  prj.project_id
+from
+  qf_role tbl
+  inner join qf_role_with_project prj
+  on prj.uniform_resource_id=tbl.uniform_resource_id
+where
+  tbl.role_name = 'plan' and prj.depth=1;
+
+
+
+DROP TABLE IF EXISTS qf_markdown_master_history;
+  CREATE TABLE qf_markdown_master_history  as
+   WITH ranked AS (
+  SELECT
+    ur.uniform_resource_id,
+    ur.uri,
+    ur.last_modified_at,
+    urpe.file_basename,
+    -- Clean and fix corrupted escapes
+    REPLACE(
+      REPLACE(
+        REPLACE(
+          REPLACE(
+            SUBSTR(
+              CAST(urt.content AS TEXT),
+              2,
+              LENGTH(CAST(urt.content AS TEXT)) - 2
+            ),
+            CHAR(10),
+            ''
+          ),
+          CHAR(13),
+          ''
+        ),
+        '\x22',
+        '"' -- Fix escaped quotes
+      ),
+      '\n',
+      '' -- Fix escaped newlines
+    ) AS cleaned_json_text,
+    ROW_NUMBER() OVER (
+      PARTITION BY ur.uri
+      ORDER BY
+        ur.last_modified_at DESC,
+        ur.uniform_resource_id DESC
+    ) AS rn,
+    urt.uniform_resource_transform_id,
+    urt.created_at
+  FROM
+    uniform_resource_transform urt
+    JOIN uniform_resource ur ON ur.uniform_resource_id = urt.uniform_resource_id
+    JOIN ur_ingest_session_fs_path_entry urpe ON ur.uniform_resource_id = urpe.uniform_resource_id
+  WHERE
+    ur.last_modified_at IS NOT NULL
+)
+SELECT
+  file_basename,
+  uniform_resource_id,
+  uri,
+  last_modified_at,
+  cleaned_json_text,
+  rn,
+  uniform_resource_transform_id,
+  created_at
+FROM
+  ranked;
+ 
+------
+ 
+DROP TABLE IF EXISTS qf_depth_history;
+CREATE TABLE qf_depth_history AS
+SELECT
+  td.uniform_resource_id,
+  td.file_basename,
+  td.rn,
+  td.uniform_resource_transform_id,
+  td.created_at,
+  jt_title.value AS title,
+  CAST(jt_depth.value AS INTEGER) AS depth,
+  jt_body.value AS body_json_string
+FROM
+  qf_markdown_master_history td,
+  json_tree(td.cleaned_json_text, '$') AS jt_section,
+  json_tree(td.cleaned_json_text, '$') AS jt_depth,
+  json_tree(td.cleaned_json_text, '$') AS jt_title,
+  json_tree(td.cleaned_json_text, '$') AS jt_body
+WHERE
+  jt_section.key = 'section'
+  AND jt_depth.parent = jt_section.id
+  AND jt_depth.key = 'depth'
+  AND jt_depth.value IS NOT NULL
+  AND jt_title.parent = jt_section.id
+  AND jt_title.key = 'title'
+  AND jt_title.value IS NOT NULL
+  AND jt_body.parent = jt_section.id
+  AND jt_body.key = 'body'
+  AND jt_body.value IS NOT NULL;
+ 
+DROP TABLE IF EXISTS qf_role_history;
+  CREATE TABLE qf_role_history AS
+ SELECT
+  ROW_NUMBER() OVER (ORDER BY s.uniform_resource_id) AS rownum ,
+  s.uniform_resource_id,
+  s.file_basename,
+  s.depth,
+  s.title,
+  s.body_json_string,
+  -- Extract @id (Test Case ID)
+  TRIM(
+    SUBSTR(
+      s.body_json_string,
+      INSTR(s.body_json_string, '@id') + 4,
+      INSTR(
+        SUBSTR(
+          s.body_json_string,
+          INSTR(s.body_json_string, '@id') + 4
+        ),
+        '"'
+      ) - 1
+    )
+  ) AS extracted_id,
+  -- Extract and normalize YAML/code content
+  CASE
+    WHEN INSTR(s.body_json_string, '"code":"') > 0 THEN REPLACE(
+      REPLACE(
+        REPLACE(
+          REPLACE(
+            REPLACE(
+              REPLACE(
+                REPLACE(
+                  REPLACE(
+                    REPLACE(
+                      REPLACE(
+                        SUBSTR(
+                          s.body_json_string,
+                          INSTR(s.body_json_string, '"code":"') + 8,
+                          INSTR(s.body_json_string, '","type":') - (INSTR(s.body_json_string, '"code":"') + 8)
+                        ),
+                        'Tags:',
+                        CHAR(10) || 'Tags:'
+                      ),
+                      'Scenario Type:',
+                      CHAR(10) || 'Scenario Type:'
+                    ),
+                    'Priority:',
+                    CHAR(10) || 'Priority:'
+                  ),
+                  'requirementID:',
+                  CHAR(10) || 'requirementID:'
+                ),
+                -- IMPORTANT: cycle-date MUST come before cycle
+                'cycle-date:',
+                CHAR(10) || 'cycle-date:'
+              ),
+              'cycle:',
+              CHAR(10) || 'cycle:'
+            ),
+            'severity:',
+            CHAR(10) || 'severity:'
+          ),
+          'assignee:',
+          CHAR(10) || 'assignee:'
+        ),
+        'status:',
+        CHAR(10) || 'status:'
+      ),
+      'issue_id:',
+      CHAR(10) || 'issue_id:'
+    )
+    ELSE NULL
+  END AS code_content,
+  rm.role_name,
+  s.rn,
+  s.uniform_resource_transform_id,
+  s.created_at
+FROM
+  qf_depth_history s
+  LEFT JOIN qf_depth_master rm ON s.uniform_resource_id = rm.uniform_resource_id
+  AND s.depth = rm.role_depth;
+ 
+ 
+DROP VIEW IF EXISTS qf_role_with_evidence_history;
+CREATE VIEW qf_role_with_evidence_history AS
+select
+  tbl.rownum,
+  tbl.extracted_id as testcaseid,
+  tbl.depth,
+  tbl.file_basename,
+  tbl.uniform_resource_id,
+  tbl.role_name,
+  trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'cycle:') + 7,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'cycle:') + 7,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'cycle:') + 7,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as cycle,
+  trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'cycle-date:') + 12,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'cycle-date:') + 12,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'cycle-date:') + 12,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as cycledate,
+  trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'severity:') + 10,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'severity:') + 10,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'severity:') + 10,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as severity,
+  trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'assignee:') + 10,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'assignee:') + 10,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'assignee:') + 10,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as assignee,
+  trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'status:') + 8,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'status:') + 8,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'status:') + 8,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as status,
+  prj.title as project_name,
+  prj.project_id,
+  cast(tbl.rn as INTEGER) as rn,
+  tbl.uniform_resource_transform_id,
+  tbl.created_at
+from
+  qf_role_history tbl
+  inner join qf_role_with_project_history prj
+  on prj.uniform_resource_id=tbl.uniform_resource_id
+where
+  tbl.role_name = 'evidence' and prj.depth=1;
+ 
+DROP VIEW IF EXISTS qf_role_with_project_history;
+CREATE VIEW qf_role_with_project_history AS
+  select  
+  distinct  
+tbl.extracted_id as project_id,
+tbl.depth,
+tbl.file_basename,
+tbl.uniform_resource_id,
+tbl.role_name,
+tbl.title
+from qf_role_history tbl
+where role_name='project'
+ ;
+ 

@@ -81,7 +81,7 @@ Generate complete test execution reports automatically.
 
 ```bash ingest --descr "Ingest Files"
 #!/usr/bin/env -S bash
-surveilr ingest files -r ./test-artifacts && surveilr orchestrate transform-markdown
+surveilr ingest files -r ./opsfolio && surveilr orchestrate transform-markdown
 ```
 # SQL query
 
@@ -92,7 +92,6 @@ surveilr shell qualityfolio-json-etl.sql
 ```bash deploy-sqlpage --descr "Generate the dev-src.auto directory to work in SQLPage dev mode"
 spry sp spc --package --conf sqlpage/sqlpage.json -m qualityfolio.md | sqlite3 resource-surveillance.sqlite.db
 ```
-
 
 # SQL Page
 
@@ -106,9 +105,10 @@ SELECT 'shell' AS component,
        'fluid' AS layout,
        true AS fixed_top_menu,
        'index.sql' AS link,
-       '/style.css' as css;
-
-
+       '{"link":"/index.sql"}' AS menu_item,
+       JSON('{"title":"User: ' || sqlpage.user_info('name') || '","link":"#"}') as menu_item;
+        
+       
 SET resource_json = sqlpage.read_file_as_text('spry.d/auto/resource/${path}.auto.json');
 SET page_title  = json_extract($resource_json, '$.route.caption');
 SET page_description  = json_extract($resource_json, '$.route.description');
@@ -117,10 +117,10 @@ SET page_path = json_extract($resource_json, '$.route.path');
 ${ctx.breadcrumbs()}
 
 ```
+
+
 ---
-```contribute sqlpage_files --base .
-./style.css .
-```
+
 # Dashboard Routes
 
 ## Home Dashboard
@@ -129,8 +129,6 @@ ${ctx.breadcrumbs()}
 
 
 -- Project Filter
-
-
 
 select
     'divider'            as component,
@@ -149,9 +147,51 @@ SET project_name = (
         THEN MIN(project_name)
         ELSE :project_name
     END
-    FROM qf_evidence_status 
+    FROM qf_role_with_evidence 
     WHERE project_name IS NOT NULL AND project_name <> ''
 );
+SELECT
+  'html' AS component,
+  '
+  <style>
+    .project-dropdown {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-top: 0 !important;
+        margin-bottom: 6px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .project-dropdown fieldset,
+    .project-dropdown form {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+    }
+
+    .project-dropdown select {
+        width: 100%;
+        height: 42px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    /* Kill orange spacing */
+    .page-body > form.project-dropdown {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .form-fieldset .row {
+        justify-content: end !important;
+    }
+  </style>
+  ' AS html;
+
 
 -- Now show the form
 SELECT 'form' AS component,
@@ -193,8 +233,10 @@ SELECT 'card' AS component, 4 AS columns;
 -- Total Test Cases
 SELECT '## Test Case Count' AS description_md,
        '# ' || COALESCE(SUM(test_case_count), 0) AS description_md,
-       'green-lt' AS background_color,
-       'file' AS icon,      
+        'white' as background_color,
+        'red' as color,
+        '12' as width,
+        'brand-speedtest'       as icon,      
        'test-cases.sql?project_name=' ||
            REPLACE(REPLACE(REPLACE(project_title, ' ', '%20'), '&', '%26'), '#', '%23') AS link
 FROM qf_case_count
@@ -204,8 +246,9 @@ WHERE
 -- Passed Cases
 SELECT '## Total Passed Cases' AS description_md,
        '# ' || COALESCE(COUNT(test_case_id), 0) AS description_md,
-       'green-lt' AS background_color,
+       'white' AS background_color,
        'check' AS icon,
+        'blue' AS color,
        'passed.sql?project_name=' ||
            REPLACE(REPLACE(REPLACE(project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link
 FROM qf_case_status
@@ -224,8 +267,9 @@ WITH counts AS (
 SELECT '## Failed Percentage' AS description_md,
        '# ' || CASE WHEN total_tests = 0 THEN '0%'
                     ELSE ROUND((total_defects * 100.0) / total_tests) || '%' END AS description_md,
-       'red-lt' AS background_color,
-       'alert-circle' AS icon
+       'white' AS background_color,
+       'alert-circle' AS icon,
+       'red' AS color
 FROM counts;
 
 -- Success Percentage
@@ -239,15 +283,17 @@ WITH counts AS (
 SELECT '## Success Percentage' AS description_md,
        '# ' || CASE WHEN total_tests = 0 THEN '0%'
                     ELSE ROUND(((total_tests - total_defects) * 100.0) / total_tests) || '%' END AS description_md,
-       'green-lt' AS background_color,
-       'check' AS icon
+       'white' AS background_color,
+        'lime' as color,
+    'circle-dashed-check'       as icon
 FROM counts;
 
 -- Open Defects
 SELECT '## Open Defects' AS description_md,
        '# ' || COALESCE(COUNT(test_case_id), 0) AS description_md,
-       'yellow-lt' AS background_color,
-       'alert-circle' AS icon,
+       'white' AS background_color,
+         'orange' as color,
+    'details-off'       as icon,
        'open.sql?project_name=' ||
            REPLACE(REPLACE(REPLACE(project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link
 FROM qf_case_status
@@ -257,8 +303,9 @@ WHERE test_case_status = 'failed'
 -- Reopened Defects
 SELECT '## Reopened Defects' AS description_md,
        '# ' || COALESCE(COUNT(test_case_id), 0) AS description_md,
-       'yellow-lt' AS background_color,
-       'alert-circle' AS icon,
+       'white' AS background_color,
+       'blue' AS color,
+        'details-off'       as icon,
        'reopen.sql?project_name=' ||
            REPLACE(REPLACE(REPLACE(project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link
 FROM qf_case_status
@@ -268,8 +315,9 @@ WHERE test_case_status = 'reopen'
 -- Total Defects
 SELECT '## Total Defects' AS description_md,
        '# ' || COALESCE(COUNT(test_case_id), 0) AS description_md,
-       'red-lt' AS background_color,
-       'bug' AS icon,
+       'white' AS background_color,
+       'red' AS color,
+        'details-off'       as icon,
        'defects.sql?project_name=' ||
            REPLACE(REPLACE(REPLACE(project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link
 FROM qf_case_status
@@ -279,8 +327,9 @@ WHERE test_case_status IN ('reopen', 'failed')
 -- Closed Defects
 SELECT '## Closed Defects' AS description_md,
        '# ' || COALESCE(COUNT(test_case_id), 0) AS description_md,
-       'blue-lt' AS background_color,
-       'x' AS icon,
+       'white' AS background_color,
+        'purple' as color,
+    'details-off'       as icon,
        'closed.sql?project_name=' ||
            REPLACE(REPLACE(REPLACE(project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link
 FROM qf_case_status
@@ -288,12 +337,13 @@ WHERE test_case_status = 'closed'
   AND project_name = :project_name;
 
 -- Todo Test cases
-SELECT '## Todo Test cases' AS description_md,
+SELECT '## Cycle Todo Test Cases' AS description_md,
        '# ' || COALESCE(COUNT(test_case_id), 0) AS description_md,
-       'red-lt' AS background_color,
+       'white' AS background_color,
        'alert-circle' AS icon,
+       'yellow' AS color,
        'todo-cycle.sql?project_name=' ||
-           REPLACE(REPLACE(REPLACE(COALESCE(:project_name, (SELECT MIN(project_name) FROM qf_evidence_status WHERE project_name IS NOT NULL AND project_name <> '')), ' ', '%20'), '&', '%26'), '#', '%23') AS link
+           REPLACE(REPLACE(REPLACE(project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link
 FROM qf_case_status
 WHERE test_case_status IN ('pending','')
   AND project_name = :project_name;
@@ -301,10 +351,11 @@ WHERE test_case_status IN ('pending','')
 -- Non assigned test cases
 SELECT '## Non Assigned Test cases' AS description_md,
        '# ' || COALESCE(COUNT(test_case_id), 0) AS description_md,
-       'red-lt' AS background_color,
+       'white' AS background_color,
        'alert-circle' AS icon,
+       'purple' AS color,
        'non-assigned-test-cases.sql?project_name=' ||
-           REPLACE(REPLACE(REPLACE(COALESCE(:project_name, (SELECT MIN(project_name) FROM qf_evidence_status WHERE project_name IS NOT NULL AND project_name <> '')), ' ', '%20'), '&', '%26'), '#', '%23') AS link
+           REPLACE(REPLACE(REPLACE(project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link
 FROM qf_case_status
 WHERE (latest_assignee IS NULL OR latest_assignee = '')
   AND project_name = :project_name;
@@ -312,7 +363,7 @@ WHERE (latest_assignee IS NULL OR latest_assignee = '')
   -- Automation percentage
  SELECT
     '## Automation Coverage' AS description_md,
-    'yellow-lt' AS background_color,
+    'white' AS background_color,
     '# ' || COALESCE(
         (
             SELECT test_case_percentage
@@ -324,14 +375,14 @@ WHERE (latest_assignee IS NULL OR latest_assignee = '')
     ) || '%' AS description_md,
      'automation.sql?project_name=' ||
            REPLACE(REPLACE(REPLACE(:project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link,
-    'orange' AS color,
+    'green' AS color,
     'brand-ansible' AS icon;
 
 
 
  SELECT
     '## Manual Coverage' AS description_md,
-    'green-lt' AS background_color,
+    'white' AS background_color,
     '# ' || COALESCE(
         (
             SELECT test_case_percentage
@@ -349,13 +400,35 @@ WHERE (latest_assignee IS NULL OR latest_assignee = '')
 -- Test suite count
 SELECT '## Test Suite Count' AS description_md,
          '# ' || COALESCE(COUNT(suiteid), 0) AS description_md,
-       'green-lt' AS background_color,
-       'file' AS icon,      
+       'white' AS background_color,
+          'pink' as color,
+    'timeline-event'       as icon,    
        'test-suite-cases.sql?project_name=' ||
            REPLACE(REPLACE(REPLACE(project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link
 FROM qf_role_with_suite
 WHERE 
+  project_name = :project_name HAVING COUNT(suiteid) > 0;
+
+-- Test plan count
+SELECT '## Test Plan Count' AS description_md,
+         '# ' || COALESCE(COUNT(planid), 0) AS description_md,
+       'white' AS background_color,
+       'timeline-event'       as icon,
+        'green' as color,      
+       'test-plan-cases.sql?project_name=' ||
+           REPLACE(REPLACE(REPLACE(project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link
+FROM qf_role_with_plan
+WHERE 
   project_name = :project_name;
+
+-- History test cases
+SELECT '## Test cases History' AS description_md,
+       'white' AS background_color,
+       'alert-circle' AS icon,
+       'blue' AS color,
+       'test-case-history.sql?project_name=' ||
+           REPLACE(REPLACE(REPLACE(:project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link;
+
   
 -- Test Status Visualization
 SELECT 'divider' AS component,
@@ -372,7 +445,7 @@ SELECT 'card' AS component, 2 AS columns;
 -- Pass parameters in the URL
 SELECT '/chart/pie-chart-left.sql?project_name=' || :project_name ||'&status=Passed&color=green&_sqlpage_embed' AS embed;
 
-SELECT '/chart/chart.sql?project_name=' || :project_name AS embed;
+SELECT '/chart/pie-chart-autostatus.sql?project_name=' || :project_name ||'&status=AUTOMATION&color=green&_sqlpage_embed' AS embed;
 -- Assignee Breakdown
 SELECT 'divider' AS component,
        'ASSIGNEE WISE TEST CASE DETAILS' AS contents,
@@ -404,31 +477,19 @@ FROM (
     UNION ALL
    
     -- Individual assignees
-    SELECT DISTINCT assignee AS label_text,
-           assignee AS value_text,
-           1 AS sort_order
-    FROM qf_assignee_master
-    WHERE assignee <> ''
-      AND assignee IN (
-          SELECT DISTINCT latest_assignee
-          FROM qf_case_status
-          WHERE project_name = CASE 
-      WHEN (SELECT COUNT(DISTINCT project_name) FROM qf_evidence_status WHERE project_name IS NOT NULL AND project_name <> '') = 1 
-      THEN COALESCE(:project_name, (SELECT MIN(project_name) FROM qf_evidence_status WHERE project_name IS NOT NULL AND project_name <> ''))
-      ELSE :project_name
-  END
-  AND (
-      (SELECT COUNT(DISTINCT project_name) FROM qf_evidence_status WHERE project_name IS NOT NULL AND project_name <> '') = 1
-      OR (:project_name IS NOT NULL AND :project_name <> '')
-  )
-            AND latest_assignee IS NOT NULL
-            AND TRIM(latest_assignee) <> ''
-      )
+
+    select tbl.assignee AS label_text,
+tbl.assignee AS value_text,
+ 1 AS sort_order
+  from qf_role_with_evidence tbl
+where project_name=:project_name  and
+ tbl.assignee!='' and tbl.assignee is not null
+group by tbl.assignee
    
     ORDER BY sort_order, label_text
 );
 
-${paginate("qf_assignee_master")}
+
 
 SELECT 'table' AS component,
        "ASSIGNEE" AS markdown,
@@ -772,7 +833,7 @@ inner join qf_role_with_case tbl2
 on tbl1.testcaseid=tbl2.testcaseid
 and tbl1.uniform_resource_id=tbl2.uniform_resource_id
 WHERE ($cycle IS NULL OR tbl1.cycle = $cycle)
-  AND ($status IS NULL OR tbl1.status = $status)
+  AND ($status IS NULL OR tbl1.status = $status) AND tbl1.project_name=$project_name
 ORDER BY tbl1.testcaseid;
 ```
 
@@ -842,73 +903,187 @@ ORDER BY test_case_id;
 
 SELECT 'text' AS component,
 $page_description AS contents_md;
+
 SELECT
   'form'    AS component,
-  'get'     AS method,
-  'Submit'  AS validate;
+  'get' AS method,
+  'TRUE' AS auto_submit;
 
 -- From date (retains value after submission)
 SELECT
   'from_date'  AS name,
   'From date'  AS label,
   'date'       AS type,
-  $from_date AS value;
+  6 as width,
+  strftime('%Y-%m-%d', $from_date) AS value;
 
 -- To date (retains value after submission)
 SELECT
   'to_date'    AS name,
   'To date'    AS label,
   'date'       AS type,
+  6 as width,
   $to_date AS value;
-SELECT 'table' AS component,
-       'CYCLE' AS markdown,
-       'TOTAL TEST CASES' AS markdown,
-       'TOTAL PASSED' AS markdown,
-       'TOTAL FAILED' AS markdown,
-       'TOTAL RE-OPEN' AS markdown,
-       'TOTAL CLOSED' AS markdown,
-       1 AS sort,
-       1 AS search;
- 
-SELECT latest_cycle AS "CYCLE",
-    '[' || COUNT(test_case_id) || '](cycletotaltestcase.sql?cycle=' || latest_cycle ||
-    CASE WHEN :from_date IS NOT NULL AND :to_date IS NOT NULL
-         THEN '&from_date=' || :from_date || '&to_date=' || :to_date
-         ELSE '' END || ')' AS "TOTAL TEST CASES",
-    '[' || SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) || '](cycletotaltestcase.sql?cycle=' || latest_cycle || '&status=passed' ||
-    CASE WHEN :from_date IS NOT NULL AND :to_date IS NOT NULL
-         THEN '&from_date=' || :from_date || '&to_date=' || :to_date
-         ELSE '' END || ')' AS "TOTAL PASSED",
-    '[' || SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) || '](cycletotaltestcase.sql?cycle=' || latest_cycle || '&status=failed' ||
-    CASE WHEN :from_date IS NOT NULL AND :to_date IS NOT NULL
-         THEN '&from_date=' || :from_date || '&to_date=' || :to_date
-         ELSE '' END || ')' AS "TOTAL FAILED",
-    '[' || SUM(CASE WHEN status = 'reopen' THEN 1 ELSE 0 END) || '](cycletotaltestcase.sql?cycle=' || latest_cycle || '&status=reopen' ||
-    CASE WHEN :from_date IS NOT NULL AND :to_date IS NOT NULL
-         THEN '&from_date=' || :from_date || '&to_date=' || :to_date
-         ELSE '' END || ')' AS "TOTAL RE-OPEN",
-    '[' || SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) || '](cycletotaltestcase.sql?cycle=' || latest_cycle || '&status=closed' ||
-    CASE WHEN :from_date IS NOT NULL AND :to_date IS NOT NULL
-         THEN '&from_date=' || :from_date || '&to_date=' || :to_date
-         ELSE '' END || ')' AS "TOTAL CLOSED",
-    cycle_date AS "CYCLE DATE CREATED"
-FROM qf_evidence_history_all
-WHERE latest_cycle != ''
- 
-AND (
-      ($from_date IS NULL OR $from_date = '')
-  AND ($to_date   IS NULL OR $to_date   = '')
-   OR (
-        DATE(
-          SUBSTR(cycle_date, 7, 4) || '-' ||
-          SUBSTR(cycle_date, 1, 2) || '-' ||
-          SUBSTR(cycle_date, 4, 2)
-        )
-        BETWEEN DATE($from_date) AND DATE($to_date)
-      )
+
+  SELECT
+  'project_name' AS name,
+  'hidden' AS type,
+  $project_name AS value;
+
+SELECT
+  'table' AS component,
+  'CYCLE' AS markdown,
+  'TOTAL TEST CASES' AS markdown,
+  'TOTAL PASSED' AS markdown,
+  'TOTAL FAILED' AS markdown,
+  'TOTAL RE-OPEN' AS markdown,
+  'TOTAL CLOSED' AS markdown,
+  'TOTAL PENDING' AS markdown,
+  1 AS sort,
+  1 AS search;
+
+
+WITH tblevidence AS (
+  SELECT
+  DISTINCT
+    tbl.assignee,
+    -- tbl.created_at,
+    tbl.cycle,
+    tbl.project_name,
+    tbl.status,
+    tbl.severity,
+    tbl.testcaseid,
+  
+  tbl.cycledate
+  FROM qf_role_with_evidence_history tbl
+  WHERE tbl.project_name = $project_name
 )
-GROUP BY ingestion_timestamp, latest_cycle, cycle_date
-ORDER BY ingestion_timestamp DESC, latest_cycle DESC;
+
+SELECT
+  tbl3.cycle,
+ tbl3.cycledate
+  ,
+
+  tbl3.project_name,
+  ${md.link(
+      "SUM(tbl3.total_testcases)",
+      [
+        "'cycletotaltestcase.sql?cycle='", "tbl3.cycle",
+        "'&project_name='", "$project_name"
+      ]
+  )} AS "TOTAL TEST CASES",
+
+  ${md.link(
+      "SUM(tbl3.passed_cases)",
+      [
+        "'cycletotaltestcase.sql?cycle='", "tbl3.cycle",
+        "'&status=passed&project_name='", "$project_name"
+      ]
+  )} AS "TOTAL PASSED",
+
+  ${md.link(
+      "SUM(tbl3.failed_cases)",
+      [
+        "'cycletotaltestcase.sql?cycle='", "tbl3.cycle",
+        "'&status=failed&project_name='", "$project_name"
+      ]
+  )} AS "TOTAL FAILED",
+
+  ${md.link(
+      "SUM(tbl3.reopen_cases)",
+      [
+        "'cycletotaltestcase.sql?cycle='", "tbl3.cycle",
+        "'&status=reopen&project_name='", "$project_name"
+      ]
+  )} AS "TOTAL RE-OPEN",
+
+  ${md.link(
+      "SUM(tbl3.closed_cases)",
+      [
+        "'cycletotaltestcase.sql?cycle='", "tbl3.cycle",
+        "'&status=closed&project_name='", "$project_name"
+      ]
+  )} AS "TOTAL CLOSED",
+
+  ${md.link(
+      "SUM(tbl3.pending_cases)",
+      [
+        "'cycletotaltestcase.sql?cycle='", "tbl3.cycle",
+        "'&status=pending&project_name='", "$project_name"
+      ]
+  )} AS "TOTAL PENDING"
+
+
+
+FROM (
+
+  SELECT
+    tbl2.cycle,
+
+    tbl2.cycledate,
+    tbl2.project_name,
+    COUNT(*) AS total_testcases,
+    0 AS passed_cases,
+    0 AS failed_cases,
+    0 AS reopen_cases,
+    0 AS closed_cases,
+    0 AS pending_cases
+  FROM tblevidence tbl2
+  GROUP BY tbl2.cycle, tbl2.cycledate, tbl2.project_name
+
+  UNION ALL
+
+  SELECT
+    tbl2.cycle,
+    tbl2.cycledate,
+    tbl2.project_name,
+    0 AS total_testcases,
+    SUM(CASE WHEN tbl2.status='passed'  THEN 1 ELSE 0 END) AS passed_cases,
+    SUM(CASE WHEN tbl2.status='failed'  THEN 1 ELSE 0 END) AS failed_cases,
+    SUM(CASE WHEN tbl2.status='reopen'  THEN 1 ELSE 0 END) AS reopen_cases,
+    SUM(CASE WHEN tbl2.status='closed'  THEN 1 ELSE 0 END) AS closed_cases,
+    SUM(CASE WHEN tbl2.status='pending' THEN 1 ELSE 0 END) AS pending_cases
+ 
+  FROM tblevidence tbl2
+  GROUP BY tbl2.cycle, tbl2.cycledate, tbl2.project_name
+
+) tbl3
+
+WHERE
+(
+  DATE(
+   
+    SUBSTR(tbl3.cycledate,7,4)||'-'||SUBSTR(tbl3.cycledate,1,2)||'-'||SUBSTR(tbl3.cycledate,4,2)
+  ) >= DATE(
+     DATE(SUBSTR($from_date,1,4)||'-'||SUBSTR($from_date,6,2)||'-'||SUBSTR($from_date,9,2))
+    
+    )
+)
+AND
+(DATE(
+
+    SUBSTR(tbl3.cycledate,7,4)||'-'||SUBSTR(tbl3.cycledate,1,2)||'-'||SUBSTR(tbl3.cycledate,4,2)
+  ) <= DATE(
+    DATE(SUBSTR($to_date,1,4)||'-'||SUBSTR($to_date,6,2)||'-'||SUBSTR($to_date,9,2))
+    
+   )
+)
+AND
+    $from_date IS NOT NULL
+AND $from_date <> ''
+AND $to_date   IS NOT NULL
+AND $to_date   <> ''
+
+GROUP BY
+  tbl3.cycle,
+  tbl3.cycledate,
+ 
+  tbl3.project_name
+
+
+ORDER BY
+  tbl3.cycle;
+
 ```
 
 ---
@@ -1115,7 +1290,7 @@ WHERE project_name = $project_name
 ORDER BY suiteid;
 
 ```
-```sql suitecasedetails.sql { route: { caption: "Test suite" } }
+```sql suitecasedetails.sql { route: { caption: "Test suite Cases" } }
 
 SELECT 'text' AS component,
 $page_description AS contents_md;
@@ -1334,4 +1509,163 @@ WHERE qcm.test_case_id = $testcaseid AND qwc.project_name=$project_name
 AND UPPER(qwc.execution_type)='MANUAL'
 ORDER BY test_case_id;
 ```
+
+```sql test-plan-cases.sql { route: { caption: "Test Plan" } }
+-- @route.description "A test plan is a high-level document that outlines the overall approach to testing a software application. It serves as a blueprint for the testing process."
+SELECT 'text' AS component,
+$page_description AS contents_md;
+
+SELECT 'table' AS component,
+       'PLAN NAME' AS markdown,
+       1 AS search,
+       1 AS sort;
+-- SELECT
+--   ${md.link(
+--       "planid",
+--       [
+--         "'plancasedetails.sql?project_name='",
+--         "project_name",
+--         "'&id='",
+--         "rownum","'&uniform_resource_id='","uniform_resource_id"
+--       ]
+--   )} AS "PLAN NAME"
+-- FROM qf_role_with_plan
+-- WHERE project_name = $project_name
+-- ORDER BY planid;
+
+with tblplansummary as (SELECT
+    tbl.project_name,
+    tbl.uniform_resource_id,
+    tbl.rownum,
+    tbl.planid,
+   case when (select count(*) from qf_role_with_suite where project_name = tbl.project_name )>0 THEN  
+   'SUITE'  
+   else
+   'CASE'
+   end AS "PLAN_DETAILS"  
+FROM qf_role_with_plan tbl)
+select
+case when PLAN_DETAILS='SUITE' THEN
+    ${md.link(
+      "planid",
+      [
+        "'plan-test-suite-cases.sql?project_name='",
+        "project_name",
+        "'&id='",
+        "rownum","'&uniform_resource_id='","uniform_resource_id"
+      ]
+  )}
+else
+   ${md.link(
+      "planid",
+      [
+        "'plancasedetails.sql?project_name='",
+        "project_name",
+        "'&id='",
+        "rownum","'&uniform_resource_id='","uniform_resource_id"
+      ]
+  )}
+end AS "PLAN NAME"
+from tblplansummary
+where project_name=$project_name;
+
+```
+
+```sql plancasedetails.sql { route: { caption: "Test Plan Details" } }
+
+SELECT 'text' AS component,
+$page_description AS contents_md;
+
+
+SELECT 'table' AS component,
+     
+       'Test Case ID' AS markdown, 
+        'Test Cases' AS title,   
+       1 AS search,
+       1 AS sort;
+SELECT
+  ${md.link(
+      "tbl.testcaseid",
+      [
+        "'testcasedetails.sql?testcaseid='",
+        "tbl.testcaseid",
+        "'&project_name='",
+        "$project_name"
+      ]
+  )} AS "Test Case ID",
+  tbl.title
+FROM qf_role_with_case tbl
+WHERE tbl.uniform_resource_id = $uniform_resource_id
+  AND tbl.project_name = $project_name
+  AND tbl.rownum > CAST($id AS NUMERIC)  
+  AND (
+        CASE
+          WHEN (
+            SELECT MIN(rownum)
+            FROM qf_role_with_suite
+            WHERE uniform_resource_id = $uniform_resource_id
+              AND rownum > CAST($id AS NUMERIC) AND tbl.project_name = $project_name
+          ) IS NOT NULL
+          THEN tbl.rownum < (
+            SELECT MIN(rownum)
+            FROM qf_role_with_suite
+            WHERE uniform_resource_id = $uniform_resource_id
+              AND rownum > CAST($id AS NUMERIC) AND tbl.project_name = $project_name
+          )
+          ELSE 1 = 1
+        END
+      );
+
+   
+```
+
+```sql plan-test-suite-cases.sql { route: { caption: "Test suite" } }
+-- @route.description "Test suite is a collection of test cases designed to verify the functionality, performance, and security of a software application. It ensures that the application meets the specified requirements by executing predefined tests across various scenarios, identifying defects, and validating that the system works as intended.."
+SELECT 'text' AS component,
+$page_description AS contents_md;
+
+SELECT 'table' AS component,
+       'SUITE NAME' AS markdown,
+       'Title' AS title,
+       1 AS search,
+       1 AS sort;
+SELECT
+  ${md.link(
+      "suiteid",
+      [
+        "'suitecasedetails.sql?project_name='",
+        "project_name",
+        "'&id='",
+        "rownum","'&uniform_resource_id='","uniform_resource_id"
+      ]
+  )} AS "SUITE NAME",
+  title AS "Title"
+FROM qf_role_with_suite
+WHERE project_name = $project_name AND uniform_resource_id=$uniform_resource_id
+ORDER BY suiteid;
+
+```
+
+```sql chart/pie-chart-autostatus.sql { route: { caption: "" } }
+SELECT 'chart' AS component,
+       'pie' AS type,
+       'Test case execution type status' AS title,
+       TRUE AS labels,
+       'green' AS color,
+       'red' AS color,
+       'chart-left' AS class;
+ 
+SELECT  
+ 
+'AUTOMATION' AS label,
+       COALESCE( test_case_percentage,0) AS value
+FROM qf_case_execution_status_percentage  
+where project_name =$project_name
+ AND  UPPER(execution_type) = 'AUTOMATION'
+ 
+ SELECT 'MANUAL' AS label,
+       COALESCE( test_case_percentage ,0) AS value
+FROM qf_case_execution_status_percentage where  project_name = $project_name
+ AND  UPPER(execution_type) = 'MANUAL';
+ ```
 
