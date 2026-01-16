@@ -104,8 +104,8 @@ SELECT 'shell' AS component,
        'https://www.surveilr.com/assets/brand/qf-logo.png' AS image,
        'fluid' AS layout,
        true AS fixed_top_menu,
-       'index.sql' AS link,      
-       '/opsfolio-integration.js' AS javascript;
+       'index.sql' AS link;      
+
         
        
 SET resource_json = sqlpage.read_file_as_text('spry.d/auto/resource/${path}.auto.json');
