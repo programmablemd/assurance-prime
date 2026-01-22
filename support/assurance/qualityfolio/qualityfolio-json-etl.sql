@@ -113,7 +113,7 @@ WHERE
   AND jt_body.value IS NOT NULL;
 -- 4. NORMALIZE + ROLE ATTACH & CODE EXTRACTION (CRITICAL: Robust Delimiter Injection)
   ------------------------------------------------------------------------------
-  DROP TABLE IF EXISTS qf_role;
+DROP TABLE IF EXISTS qf_role;
 CREATE TABLE qf_role AS
 SELECT
 ROW_NUMBER() OVER (ORDER BY s.uniform_resource_id) AS rownum ,
@@ -148,6 +148,11 @@ ROW_NUMBER() OVER (ORDER BY s.uniform_resource_id) AS rownum ,
                   REPLACE(
                     REPLACE(
                       REPLACE(
+                          REPLACE(
+                           REPLACE(
+                           REPLACE(
+                           REPLACE(
+                           REPLACE(
                         SUBSTR(
                           s.body_json_string,
                           INSTR(s.body_json_string, '"code":"') + 8,
@@ -183,6 +188,23 @@ ROW_NUMBER() OVER (ORDER BY s.uniform_resource_id) AS rownum ,
       ),
       'issue_id:',
       CHAR(10) || 'issue_id:'
+    )
+    ,
+      'plan-name:',
+      CHAR(10) || 'plan-name:'
+    ),
+      'plan-date:',
+      CHAR(10) || 'plan-date:'
+    ),
+      'created-by:',
+      CHAR(10) || 'created-by:'
+    )
+    ,
+      'suite-name:',
+      CHAR(10) || 'suite-name:'
+    ),
+      'suite-date:',
+      CHAR(10) || 'suite-date:'
     )
     ELSE NULL
   END AS code_content,
@@ -1851,16 +1873,6 @@ from
 where
   tbl.role_name = 'case' and prj.depth=1;
 
--- Table to control which Gmail users are allowed to authenticate
-DROP TABLE IF EXISTS users;
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL UNIQUE,           -- Gmail / Google account email
-    is_active INTEGER NOT NULL DEFAULT 1, -- 1 = allowed, 0 = blocked    
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO users (email, is_active) VALUES ('rnairr51@gmail.com', 1); 
 
 DROP VIEW IF EXISTS qf_testcase_status;
 CREATE VIEW qf_testcase_status AS
@@ -1938,7 +1950,7 @@ select
   tbl.uniform_resource_id,
   tbl.role_name,
   tbl.title,
-  trim(
+   trim(
     replace(
       SUBSTR(
         tbl.code_content,
@@ -2022,6 +2034,90 @@ select
       ''
     )
   ) as scenario_type,
+  trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'suite-name:') + 12,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'suite-name:') + 12,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'suite-name:') + 12,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as suite_name,
+  trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'suite-date:') + 12,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'suite-date:') + 12,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'suite-date:') + 12,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as suite_date,
+  trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'created-by:') + 12,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'created-by:') + 12,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'created-by:') + 12,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as created_by,
   prj.title as project_name,
   prj.project_id
 from
@@ -2124,6 +2220,90 @@ select
       ''
     )
   ) as scenario_type ,
+    trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'plan-name:') + 11,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'plan-name:') + 11,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'plan-name:') + 11,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as plan_name ,
+  trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'plan-date:') + 11,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'plan-date:') + 11,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'plan-date:') + 11,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as plan_date ,
+  trim(
+    replace(
+      SUBSTR(
+        tbl.code_content,
+        INSTR(tbl.code_content, 'created-by:') + 12,
+        case
+          when INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'created-by:') + 12,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          ) = 0 then length(tbl.code_content)
+          else INSTR(
+            substr(
+              tbl.code_content,
+              INSTR(tbl.code_content, 'created-by:') + 12,
+              length(tbl.code_content)
+            ),
+            CHAR(10)
+          )
+        end
+      ),
+      char(10),
+      ''
+    )
+  ) as created_by ,
   prj.title as project_name,
   prj.project_id
 from
@@ -2480,4 +2660,232 @@ tbl.title
 from qf_role_history tbl
 where role_name='project'
  ;
+
+CREATE TABLE IF NOT EXISTS github_issues (
+  number INTEGER,
+  assignee TEXT,
+  title TEXT,
+  body TEXT,
+  html_url TEXT,
+  author_association TEXT,
+  created_at TEXT,
+  state TEXT,  
+  user TEXT
+);
+-- Drop target view first (safe)
+DROP VIEW IF EXISTS qf_issue_detail;
+-- Create only if github_issues exists
+CREATE VIEW qf_issue_detail AS
+SELECT *
+FROM (
+    SELECT
+        number AS id,
+        substr(assignee, instr(assignee, '"login":') + 9,
+               instr(assignee, ',') - (instr(assignee, '"login":') + 10)) AS assignee,
+
+        substr(
+            substr(body, instr(body,'**Test Case ID : [')+18),
+            1,
+            instr(substr(body, instr(body,'**Test Case ID : [')+18), ']**') - 1
+        ) AS testcase_id,
+
+        title AS testcase_description,
+        body,
+
+        CASE
+            WHEN instr(substr(body, instr(body,'http')), '"') > 0 THEN
+                substr(
+                    substr(body, instr(body,'http')),
+                    1,
+                    instr(substr(body, instr(body,'http')), '"') - 1
+                )
+            ELSE
+                substr(
+                    substr(body, instr(body,'http')),
+                    1,
+                    instr(substr(body, instr(body,'http')), ')') - 1
+                )
+        END AS attachment_url,
+
+        html_url,
+        author_association,
+        created_at,
+        state,
+        'GIT' AS external_source,
+        substr(user, 11, instr(user,'",') - 11) AS owner,
+
+        substring(
+            substring(html_url, 1, instr(html_url,'/issues') - 1),
+            instr(substring(html_url,1,instr(html_url,'/issues')-1), assignee)
+            + length(assignee) + 1
+        ) AS project_name
+
+    FROM github_issues
+)
+WHERE EXISTS (
+    SELECT 1
+    FROM sqlite_master
+    WHERE type = 'view'
+      AND name = 'github_issues'
+);
+
+
+DROP VIEW IF EXISTS qf_plan_requirement_summary;
+CREATE VIEW qf_plan_requirement_summary AS
+       with tbldata as (SELECT
+substring(body_json_string,1,instr(body_json_string,',{"section":{"depth":3'))  as body_string,
+rownum
+FROM qf_role where role_name ='plan'  
+),
+tblsubdata as (
+select
+  rownum,
+ substring(body_string,instr(body_string,'[{"paragraph":"@id')+18,instr(body_string,'"},')-(18+1)) as PlanID,
+ substring(body_string,instr(body_string,'plan-name:')+10,
+instr(
+    substring(body_string,instr(body_string,'plan-name:')+10,length(body_string))    
+    ,  'plan-date:') -1
+  ) as PlanName,
+substring(body_string,instr(body_string,'requirementID:')+14,
+instr(
+    substring(body_string,instr(body_string,'requirementID:')+14,length(body_string))    
+    ,  'title:') -1
+  ) as requirement_id,
+ substring(body_string,instr(body_string,'role: requirement'),length(body_string)) as body_content
+from tbldata)
+select rownum,requirement_id,PlanID,PlanName,body_content from tblsubdata ;
  
+ 
+ 
+DROP VIEW IF EXISTS qf_plan_requirement_details;
+CREATE VIEW qf_plan_requirement_details AS
+WITH RECURSIVE paragraphs(rownum , text, paragraph) AS (
+    -- Base case: start with full text and plan info
+    SELECT
+        rownum,
+        body_content,
+        NULL
+    FROM qf_plan_requirement_summary
+ 
+    UNION ALL
+ 
+    -- Recursive step: extract next paragraph
+    SELECT
+        rownum,
+        substr(text, instr(text, '"paragraph":"') + 13),
+        substr(
+            text,
+            instr(text, '"paragraph":"') + 13,
+            instr(substr(text, instr(text, '"paragraph":"') + 13), '"') - 1
+        )
+    FROM paragraphs
+    WHERE instr(text, '"paragraph":"') > 0
+)
+SELECT
+    ROW_NUMBER() OVER (ORDER BY p.rownum) AS rownumdetail ,
+    p.rownum,
+    p.paragraph AS description
+FROM paragraphs p  
+WHERE p.paragraph IS NOT NULL;
+
+
+DROP VIEW IF EXISTS qf_suite_description_summary;
+CREATE VIEW qf_suite_description_summary AS
+with tbldata as (SELECT
+substring(body_json_string,1,instr(body_json_string,',{"section":{"depth":4'))  as body_string,
+rownum
+FROM qf_role where role_name ='suite'  
+)  ,
+tblsubdata as (
+select
+  rownum,
+   substring(body_string,instr(body_string,'[{"paragraph":"@id')+18,
+instr(
+    substring(body_string,instr(body_string,'[{"paragraph":"@id')+18,length(body_string))    
+    ,  '"},') -1
+  ) as suite_id,
+  substring(body_string,instr(body_string,'"HFM"}},')+8,length(body_string)) as body_content
+from tbldata)
+select rownum,suite_id, body_content from tblsubdata ;
+ 
+ 
+DROP VIEW IF EXISTS qf_suite_description_details;
+CREATE VIEW qf_suite_description_details AS
+WITH RECURSIVE paragraphs(rownum , text, paragraph) AS (
+    -- Base case: start with full text and plan info
+    SELECT
+        rownum,
+        body_content,
+        NULL
+    FROM qf_suite_description_summary
+ 
+    UNION ALL
+ 
+    -- Recursive step: extract next paragraph
+    SELECT
+        rownum,
+        substr(text, instr(text, '"paragraph":"') + 13),
+        substr(
+            text,
+            instr(text, '"paragraph":"') + 13,
+            instr(substr(text, instr(text, '"paragraph":"') + 13), '"') - 1
+        )
+    FROM paragraphs
+    WHERE instr(text, '"paragraph":"') > 0
+)
+SELECT
+    ROW_NUMBER() OVER (ORDER BY p.rownum) AS rownumdetail ,
+    p.rownum,
+    p.paragraph AS description
+FROM paragraphs p  
+WHERE p.paragraph IS NOT NULL;
+
+DROP VIEW IF EXISTS qf_plan_summary;
+CREATE VIEW qf_plan_summary AS
+with tbldata as (SELECT
+substring(body_json_string,1,instr(body_json_string,',{"section":{"depth":3'))  as body_string,
+rownum
+FROM qf_role where role_name ='plan'  
+),
+tblsubdatal1 as (
+select
+  rownum,
+ substring(body_string,instr(body_string,'yaml')+5,length(body_string)) as body_content_l1
+from tbldata) ,
+tblsubdata as (
+select
+  rownum,
+ substring(body_content_l1,1, instr(body_content_l1,'"paragraph":"@id')  ) as body_content
+from tblsubdatal1)  
+select rownum ,body_content from tblsubdata ;
+ 
+ 
+ 
+DROP VIEW IF EXISTS qf_plan_detail;
+CREATE VIEW qf_plan_detail AS
+WITH RECURSIVE paragraphs(rownum , text, paragraph) AS (
+    -- Base case: start with full text and plan info
+    SELECT
+        rownum,
+        body_content,
+        NULL
+    FROM qf_plan_summary
+    UNION ALL
+    -- Recursive step: extract next paragraph
+    SELECT
+        rownum,
+        substr(text, instr(text, '"paragraph":"') + 13),
+        substr(
+            text,
+            instr(text, '"paragraph":"') + 13,
+            instr(substr(text, instr(text, '"paragraph":"') + 13), '"') - 1
+        )
+    FROM paragraphs
+    WHERE instr(text, '"paragraph":"') > 0
+)
+SELECT
+    ROW_NUMBER() OVER (ORDER BY p.rownum) AS rownumdetail ,
+    p.rownum,
+    p.paragraph AS description
+FROM paragraphs p  
+WHERE p.paragraph IS NOT NULL;
