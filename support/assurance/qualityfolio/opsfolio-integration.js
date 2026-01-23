@@ -1,5 +1,3 @@
-
-
 /**
  * opsfolio-integration.js
  *
@@ -26,16 +24,6 @@ function isInIframe() {
         // Cross-origin access throws SecurityError → definitely iframe
         return true;
     }
-}
-
-/* ----------------------------------------------------------
- * Extract header text BEFORE removal
- * ---------------------------------------------------------- */
-function extractHeader() {
-    const header = document.getElementById("sqlpage_header");
-    if (!header) return null;
-
-    return header.textContent?.trim() || null;
 }
 
 /* ----------------------------------------------------------
@@ -102,29 +90,60 @@ function cleanupChildUI() {
  * Main integration workflow
  * ---------------------------------------------------------- */
 function runOpsfolioIntegration() {
-    if (!isInIframe()) return;
+  if (!isInIframe()) return;
 
-    const header = extractHeader();
-    const breadcrumbs = extractBreadcrumbs();
+  const pageTitle = extractPageTitle();
+  const breadcrumbs = extractBreadcrumbs();
 
-    notifyParent({
-        header,
-        breadcrumbs
-    });
+  notifyParent({
+    pageTitle,
+    breadcrumbs,
+  });
 
-    cleanupChildUI();
+  cleanupChildUI();
+}
+
+
+/* ----------------------------------------------------------
+ * Hide internal page title when parent controls layout
+ * ---------------------------------------------------------- */
+function hideInternalTitle() {
+    const h1 =
+        document.querySelector("h1") ||
+        document.querySelector("[data-page-title]");
+
+    if (h1) {
+        h1.style.display = "none";
+    }
+}
+
+/* ----------------------------------------------------------
+ * Extract page title from H1
+ * ---------------------------------------------------------- */
+function extractPageTitle() {
+  const h1 =
+    document.querySelector("main h1") ||
+    document.querySelector("[data-page-title]") ||
+    document.querySelector("h1");
+
+  return h1?.textContent?.trim() || null;
 }
 
 /* ----------------------------------------------------------
  * Auto-run after DOM is fully loaded
  * ---------------------------------------------------------- */
 document.addEventListener("DOMContentLoaded", runOpsfolioIntegration);
+
 /* ----------------------------------------------------------
- * Listen for navigation requests from parent (Astro)
+ * Listen for events from parent (Astro)
  * ---------------------------------------------------------- */
 window.addEventListener("message", (event) => {
     if (event.data?.type === "navigate-home" && event.data.href) {
         // Navigate iframe to its home
         window.location.href = event.data.href;
+    }
+
+    if (event.data?.type === "hide-internal-title") {
+        hideInternalTitle();
     }
 });

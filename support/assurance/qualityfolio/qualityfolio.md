@@ -479,25 +479,23 @@ FROM qf_role_with_plan
 WHERE
   project_name = :project_name;
 
--- History test cases
-SELECT
-       '## Test Cycle Execution History' AS description_md,
-       '👆' AS description_md,
-       'white' AS background_color,
-       'alert-circle' AS icon,
-       'blue' AS color,
-       'test-case-history.sql?project_name=' ||
-           REPLACE(REPLACE(REPLACE(:project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link;
+-- -- History test cases
+-- SELECT
+--        '## Test Cycle Execution History' AS description_md,       
+--        'white' AS background_color,
+--        'alert-circle' AS icon,
+--        'blue' AS color,
+--        'test-case-history.sql?project_name=' ||
+--            REPLACE(REPLACE(REPLACE(:project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link;
 
--- History test cases
-SELECT
-       '## Team Productivity' AS description_md,
-       '👆' AS description_md,
-       'white' AS background_color,
-       'alert-circle' AS icon,
-       'green' AS color,
-       'productivity.sql?project_name=' ||
-           REPLACE(REPLACE(REPLACE(:project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link;
+-- -- History test cases
+-- SELECT
+--        '## Team Productivity' AS description_md,      
+--        'white' AS background_color,
+--        'alert-circle' AS icon,
+--        'green' AS color,
+--        'productivity.sql?project_name=' ||
+--            REPLACE(REPLACE(REPLACE(:project_name, ' ', '%20'), '&', '%26'), '#', '%23') AS link;
 
 
 -- Test Status Visualization
