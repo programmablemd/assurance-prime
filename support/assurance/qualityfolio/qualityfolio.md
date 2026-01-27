@@ -3,7 +3,6 @@ sqlpage-conf:
   database_url: "sqlite://resource-surveillance.sqlite.db?mode=rwc"
   web_root: "./dev-src.auto"
   allow_exec: true
-  port: "9227"
 ---
  
 
