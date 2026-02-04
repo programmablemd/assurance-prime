@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://demo.qualityfolio.dev/">
-    <img src="assets/qualityfolio-logo.png" alt="QualityFolio" width="500">
+  <a href="https://qualityfolio.dev/">
+    <img src="assets/qualityfolio-logo.png" alt="QualityFolio" width="250">
   </a>
 </p>
 
@@ -14,7 +14,7 @@
   <a href="https://qualityfolio.dev/"><img src="https://img.shields.io/badge/Website-06B6D4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website"></a>
 </p>
 
-**QualityFolio** is a flexible test authoring framework powered by **Spry's Axiom pattern**. Author plain, human-friendly Markdown for tests that can be parsed into any structure later. Start simple, scale infinitely.
+[**QualityFolio**](https://qualityfolio.dev/) is a flexible test authoring framework powered by **Spry's Axiom pattern**. Author plain, human-friendly Markdown for tests that can be parsed into any structure later. Start simple, scale infinitely.
 
 ## ✨ Why QualityFolio?
 
@@ -547,13 +547,8 @@ This command ingests the test artifact files and generates the SQLite database `
 
 ```bash
 spry rb run qualityfolio.md
-spry sp spc --fs dev-src.auto --destroy-first --conf sqlpage/sqlpage.json --md qualityfolio.md --watch
-```
-
-2. In another terminal, start SQLPage:
-
-```bash
-sqlpage
+spry sp spc --fs dev-src.auto --destroy-first --conf sqlpage/sqlpage.json --md qualityfolio.md
+EOH_INSTANCE=1 SQLPAGE_SITE_PREFIX=/netspective-qualityfolio PORT=9227 surveilr web-ui -d ./resource-surveillance.sqlite.db --port 9227 --host 0.0.0.0
 ```
 
 This will launch the **Test Management Dashboard** with test metrics, requirement traceability matrix, and test cycle–wise execution views at:
