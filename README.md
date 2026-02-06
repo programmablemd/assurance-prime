@@ -5,10 +5,6 @@
 </p>
 
 <p align="center">
-  <em>AI-native test management for QA engineers, SREs, and DevOps teams. From unit tests to chaos experiments: unified in Markdown, validated in SQL. Built for regulated industries where accountability, traceability, and structured evidence are essential.</em>
-</p>
-
-<p align="center">
   <a href="https://discord.gg/JqE86pyT"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
   <a href="https://docs.opsfolio.com/qualityfolio/getting-started/quick-start"><img src="https://img.shields.io/badge/Docs-4285F4?style=for-the-badge&logo=googledocs&logoColor=white" alt="Docs"></a>
   <a href="https://qualityfolio.dev/"><img src="https://img.shields.io/badge/Website-06B6D4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website"></a>
@@ -25,7 +21,33 @@
 - 🚀 **Auto-Discovery** - Let the parser figure out your structure, or define it yourself
 - 📈 **Built-in Dashboard** - Generate test management dashboards with metrics & traceability
 
-## 🚀 Getting Started
+## 🔗 Works With Your Existing Workflow
+
+**Qualityfolio doesn't replace your tools—it upgrades them.**
+
+Qualityfolio is built to complement your existing test management, automation frameworks, and documentation systems. Write tests in Markdown, execute with your current tools, and capture evidence in structured SQL for audit-ready traceability.
+
+### 💡 From Fragmented to Unified
+
+**Instead of:**
+
+- ❌ Tests scattered across multiple tools and formats
+- ❌ Evidence lost in screenshots and spreadsheets
+- ❌ Manual traceability matrices that break on every change
+- ❌ No version history or accountability trail
+
+**You get:**
+
+- ✅ **Human-readable Markdown** - Version controlled, reviewable, and Git-native
+- ✅ **Structured SQL evidence** - Queryable, immutable, and audit-ready
+- ✅ **Automated traceability** - Requirements ↔ Tests ↔ Evidence ↔ Results
+- ✅ **Evidence-grade accountability** - Complete history of who tested what, when, and why
+
+> **Philosophy:** Quality is only provable when declared intent (tests) aligns with runtime reality (evidence). Qualityfolio enforces this rigorously.
+
+---
+
+## �🚀 Getting Started
 
 **Simple rules:**
 
@@ -41,6 +63,12 @@
 - **🚀 [Start building](#-getting-started)** - Generate your database & dashboard
 - **📚 [See examples](#-example-files)** - View real test artifacts
 - **🔧 [Get help](#-troubleshooting)** - Common issues & solutions
+
+### 🌐 Try the Qualityfolio Demo
+
+**[View Live Dashboard ](https://demo.qualityfolio.dev/)**
+
+Explore a fully functional Qualityfolio dashboard with sample test artifacts, metrics, and traceability views.
 
 ## 🚀 Quick Start
 
@@ -83,8 +111,6 @@ wget https://github.com/surveilr/packages/releases/download/3.23.0/surveilr_3.23
 tar -xzf surveilr_3.23.0_x86_64-unknown-linux-gnu.tar.gz
 sudo mv surveilr /usr/local/bin/
 
-# Verify Installations
-deno --version && brew --version && spry --version && surveilr --version
 ```
 
 **For macOS:**
@@ -102,8 +128,6 @@ brew install programmablemd/packages/spry
 # 4. Install Surveilr
 brew tap surveilr/tap && brew install surveilr
 
-# Verify Installations
-deno --version && brew --version && spry --version && surveilr --version
 ```
 
 #### 3. Install Qualityfolio Extension (for Visual Studio Code/Cursor IDE)
